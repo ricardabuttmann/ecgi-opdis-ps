@@ -1,0 +1,7 @@
+Case,Method,RE ↓,ATE [ms] ↓,LE [mm] ↓,sCC ↑,tCC ↑
+lung-conductivity,Tikhonov (spatial),0.831676,6.325000,4.312577,0.545714,0.728686
+lung-conductivity,Transformer,0.430265,3.150000,4.337551,0.788362,0.881730
+subcutaneous-fat,Tikhonov (spatial),0.626679,6.377778,5.680979,0.589539,0.775571
+subcutaneous-fat,Transformer,0.394370,2.755556,2.434576,0.799735,0.902816
+lbbb-lung-conductivity,Tikhonov (spatial),0.757108,15.730556,21.948722,0.650005,0.778286
+lbbb-lung-conductivity,Transformer,0.697680,11.530556,15.668781,0.626335,0.732984

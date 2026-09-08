@@ -1,0 +1,8 @@
+method = "tv"
+label = "Total variation"
+
+[settings]
+alpha = 0.01
+epsilon = 1e-6
+max_iterations = 100000
+tolerance = 1e-5

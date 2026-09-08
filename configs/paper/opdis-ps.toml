@@ -1,0 +1,14 @@
+method = "opdis-ps"
+
+[settings]
+checkpoint = "checkpoints/prior-s0.pt"
+weights = "ema"
+mode = "measurement_plus_discrepancy_conditional"
+conditional_artifact = "opdis-ps.npz"
+discrepancy_ridge = 0.0
+steps = 20
+eta = 1.0
+eta_b = 1.0
+sample_seed = 3079211378235261092
+point_samples = 16
+relative_floor = 1e-8

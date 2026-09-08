@@ -1,0 +1,7 @@
+[simulation]
+tend_ms = 450.0
+spacedt_ms = 5.0
+timedt_ms = 5.0
+stim_strength = 200.0
+stim_duration_ms = 2.0
+bidomain_mode = 2

@@ -1,0 +1,12 @@
+method = "ddrm"
+
+[settings]
+checkpoint = "checkpoints/prior-s0.pt"
+weights = "ema"
+mode = "measurement_only"
+steps = 20
+eta = 1.0
+eta_b = 1.0
+sample_seed = 3079211378235261092
+point_samples = 16
+relative_floor = 1e-8

@@ -1,0 +1,10 @@
+method = "palette"
+
+[settings]
+checkpoint = "checkpoints/palette-s0.pt"
+weights = "ema"
+steps = 50
+eta = 0.0
+temperature = 1.0
+sample_seed = 3079211378235261092
+point_samples = 16

@@ -1,0 +1,5 @@
+method = "transformer"
+
+[settings]
+checkpoint = "checkpoints/transformer-s0.pt"
+weights = "raw"
