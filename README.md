@@ -69,6 +69,32 @@ comparison target in addition to the automated structural tests. The values were
 this release runner and checked against the corresponding production reports. Minor backend
 rounding is acceptable; use absolute tolerances of 0.001 for RE/sCC/tCC and 0.01 ms/mm for ATE/LE.
 
+## Run an indexed benchmark case
+
+The accepted-paper dataset is distributed separately as `paper-evaluation-v1` and
+`paper-training-v1`. After extracting the evaluation package, verify every downloaded byte:
+
+```bash
+python scripts/validate_dataset.py artifacts/paper-evaluation-v1
+```
+
+Run one case through the same method adapter used by the bundled examples:
+
+```bash
+python scripts/run_benchmark_case.py \
+  --dataset artifacts/paper-evaluation-v1 \
+  --case-id healthy-test-p0001-r00 \
+  --forward-spec conductivity \
+  --snr-db 40 \
+  --method tikhonov
+```
+
+The loader joins `truth`, `measurement_clean`, and the nominal reconstruction operator by their
+public `case_id`, `geometry_id`, and `operator_id`. It reads only the necessary row from each NumPy
+shard, loads the shared surface and regularizer, and recreates the frozen average-referenced
+`awgn_iid` noise direction from the anonymous per-case seed in `noise.jsonl`. Internal simulation
+paths and source subject identifiers are neither required nor exposed.
+
 ## Methods and frozen settings
 
 ### Variational regularization

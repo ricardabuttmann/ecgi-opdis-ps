@@ -14,9 +14,13 @@ class ExampleCase:
     """Arrays shared by every released inverse method."""
 
     measurement: np.ndarray
+    measurement_clean: np.ndarray
     forward: np.ndarray
     truth: np.ndarray
     points_mm: np.ndarray
+    faces: np.ndarray
+    grid_weights: np.ndarray
+    time_ms: np.ndarray
     laplacian: sp.csr_matrix
     template_z: np.ndarray
     template_phi: np.ndarray
@@ -27,6 +31,10 @@ class ExampleCase:
     realized_snr_db: float
     noise_norm: float
     case_id: str
+    geometry_id: str
+    forward_spec: str
+    noise_kind: str
+    noise_seed: int
     operator_discrepancy: str
 
 
@@ -89,9 +97,23 @@ def load_example_case(path: str | Path) -> ExampleCase:
             raise ValueError(f"unsupported example schema {schema_version!r}")
 
         measurement = np.asarray(data["measurement"], dtype=np.float64)
+        measurement_clean = np.asarray(
+            data["measurement_clean"] if "measurement_clean" in data.files else measurement,
+            dtype=np.float64,
+        )
         forward = np.asarray(data["forward"], dtype=np.float64)
         truth = np.asarray(data["truth"], dtype=np.float64)
         points_mm = np.asarray(data["points_mm"], dtype=np.float64)
+        faces = (
+            np.asarray(data["faces"], dtype=np.int64)
+            if "faces" in data.files
+            else np.empty((0, 3), dtype=np.int64)
+        )
+        grid_weights = (
+            np.asarray(data["grid_weights"], dtype=np.float64)
+            if "grid_weights" in data.files
+            else np.full(truth.shape[0], 1.0 / truth.shape[0], dtype=np.float64)
+        )
         shape = tuple(int(value) for value in np.asarray(data["laplacian_shape"]).reshape(-1))
         if len(shape) != 2:
             raise ValueError(f"laplacian_shape must contain two entries, got {shape}")
@@ -110,14 +132,33 @@ def load_example_case(path: str | Path) -> ExampleCase:
         )
         lambda_min = _scalar(data, "lambda_min")
         dt_ms = _scalar(data, "dt_ms")
+        time_ms = (
+            np.asarray(data["time_ms"], dtype=np.float64)
+            if "time_ms" in data.files
+            else np.arange(truth.shape[1], dtype=np.float64) * dt_ms
+        )
         target_snr_db = _scalar(data, "target_snr_db")
         realized_snr_db = _scalar(data, "realized_snr_db")
         noise_norm = _scalar(data, "noise_norm")
         case_id = str(np.asarray(data["case_id"]).item())
         operator_discrepancy = str(np.asarray(data["operator_discrepancy"]).item())
+        geometry_id = (
+            str(np.asarray(data["geometry_id"]).item()) if "geometry_id" in data.files else ""
+        )
+        forward_spec = (
+            str(np.asarray(data["forward_spec"]).item())
+            if "forward_spec" in data.files
+            else operator_discrepancy
+        )
+        noise_kind = (
+            str(np.asarray(data["noise_kind"]).item()) if "noise_kind" in data.files else "awgn_iid"
+        )
+        noise_seed = int(np.asarray(data["noise_seed"]).item()) if "noise_seed" in data.files else 0
 
     if measurement.ndim != 2 or forward.ndim != 2 or truth.ndim != 2:
         raise ValueError("measurement, forward, and truth must all be two-dimensional")
+    if measurement_clean.shape != measurement.shape:
+        raise ValueError("measurement_clean and measurement must have matching shapes")
     if forward.shape[0] != measurement.shape[0]:
         raise ValueError("forward rows must match the number of measurement electrodes")
     if forward.shape[1] != truth.shape[0]:
@@ -128,6 +169,12 @@ def load_example_case(path: str | Path) -> ExampleCase:
         raise ValueError("laplacian shape must match the number of truth nodes")
     if points_mm.shape != (truth.shape[0], 3):
         raise ValueError("points_mm must contain one 3D coordinate per truth node")
+    if faces.ndim != 2 or faces.shape[1] != 3:
+        raise ValueError("faces must have shape [n_faces, 3]")
+    if grid_weights.shape != (truth.shape[0],) or np.any(grid_weights <= 0):
+        raise ValueError("grid_weights must contain one positive weight per truth node")
+    if time_ms.shape != (truth.shape[1],) or np.any(np.diff(time_ms) <= 0):
+        raise ValueError("time_ms must be strictly increasing and match the time axis")
     if len(template_shape) != 2 or np.prod(template_shape) != truth.shape[0]:
         raise ValueError("template_shape must be two-dimensional and match the state size")
     if template_z.shape != (truth.shape[0],):
@@ -138,12 +185,15 @@ def load_example_case(path: str | Path) -> ExampleCase:
         np.isfinite(array).all()
         for array in (
             measurement,
+            measurement_clean,
             forward,
             truth,
             points_mm,
             laplacian.data,
             template_z,
             template_phi,
+            grid_weights,
+            time_ms,
         )
     ):
         raise ValueError("example arrays must contain only finite values")
@@ -161,9 +211,13 @@ def load_example_case(path: str | Path) -> ExampleCase:
 
     return ExampleCase(
         measurement=measurement,
+        measurement_clean=measurement_clean,
         forward=forward,
         truth=truth,
         points_mm=points_mm,
+        faces=faces,
+        grid_weights=grid_weights,
+        time_ms=time_ms,
         laplacian=laplacian,
         template_z=template_z,
         template_phi=template_phi,
@@ -174,5 +228,9 @@ def load_example_case(path: str | Path) -> ExampleCase:
         realized_snr_db=realized_snr_db,
         noise_norm=noise_norm,
         case_id=case_id,
+        geometry_id=geometry_id,
+        forward_spec=forward_spec,
+        noise_kind=noise_kind,
+        noise_seed=noise_seed,
         operator_discrepancy=operator_discrepancy,
     )
