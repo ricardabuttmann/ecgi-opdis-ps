@@ -10,7 +10,7 @@ from typing import Any
 import numpy as np
 
 from opdis_ps.config import load_method_config
-from opdis_ps.data import load_example_case
+from opdis_ps.data import ExampleCase, load_example_case
 from opdis_ps.metrics import evaluate_reconstruction
 from opdis_ps.public_models import (
     run_ddrm,
@@ -36,15 +36,15 @@ IMPLEMENTED_METHODS = (
 )
 
 
-def run_method(
+def run_loaded_case(
     method: str,
-    case_path: str | Path,
+    case: ExampleCase,
     output_root: str | Path,
     config_root: str | Path,
 ) -> dict[str, Any]:
+    """Run one method on either a legacy example or an indexed dataset case."""
     if method not in IMPLEMENTED_METHODS:
         raise ValueError(f"unknown method {method!r}; available: {IMPLEMENTED_METHODS}")
-    case = load_example_case(case_path)
     config = load_method_config(config_root, method)
     settings = config.get("settings", {})
     started = time.perf_counter()
@@ -96,3 +96,13 @@ def run_method(
         json.dumps(record, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
     return record
+
+
+def run_method(
+    method: str,
+    case_path: str | Path,
+    output_root: str | Path,
+    config_root: str | Path,
+) -> dict[str, Any]:
+    """Compatibility wrapper for the bundled self-contained NPZ examples."""
+    return run_loaded_case(method, load_example_case(case_path), output_root, config_root)
