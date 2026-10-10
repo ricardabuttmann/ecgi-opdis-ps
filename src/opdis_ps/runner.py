@@ -78,6 +78,12 @@ def run_loaded_case(
     record: dict[str, Any] = {
         "method": method,
         "case_id": case.case_id,
+        "geometry_id": case.geometry_id,
+        "operator_id": f"{case.geometry_id}-nominal" if case.geometry_id else "",
+        "forward_spec": case.forward_spec,
+        "operator_discrepancy": case.operator_discrepancy,
+        "noise_kind": case.noise_kind,
+        "noise_seed": case.noise_seed,
         "target_snr_db": case.target_snr_db,
         "realized_snr_db": case.realized_snr_db,
         **metrics,
