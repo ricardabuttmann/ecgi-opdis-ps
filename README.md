@@ -110,9 +110,9 @@ python scripts/run_cohort.py \
 `cases.jsonl`, such as `test_lbbb_mild`. Use `--limit 1` for a quick end-to-end check. Results are
 written after every case: `results.csv` contains one row per case and `summary.csv` contains the
 mean and sample standard deviation for each population/pathology block. The command reuses a case
-only when its package manifest, operator, method config, checkpoint, likelihood artifact, forward
-specification, and SNR identity match, so rerunning the same command safely continues an interrupted
-job. Pass `--force` to recompute completed cases.
+only when its package manifest, operator, public implementation, method config, checkpoint,
+likelihood artifact, forward specification, and SNR identity match, so rerunning the same command
+safely continues an interrupted job. Pass `--force` to recompute completed cases.
 
 ## Methods and frozen settings
 

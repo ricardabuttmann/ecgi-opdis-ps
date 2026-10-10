@@ -6,7 +6,7 @@ from pathlib import Path
 
 import numpy as np
 
-from opdis_ps.cohort import METRICS, aggregate_results, run_cohort, select_case_ids
+from opdis_ps.cohort import METRICS, aggregate_results, method_assets, run_cohort, select_case_ids
 
 
 class _Dataset:
@@ -71,7 +71,7 @@ def _record(method: str, case, output_root: Path, config_root: Path) -> dict:
         **dict.fromkeys(METRICS, value),
     }
     method_output = output_root / method
-    method_output.mkdir(parents=True)
+    method_output.mkdir(parents=True, exist_ok=True)
     (method_output / "metrics.json").write_text(json.dumps(record), encoding="utf-8")
     np.savez(method_output / "reconstruction.npz", reconstruction=np.zeros((1, 1)))
     return record
@@ -84,9 +84,9 @@ def test_selection_uses_public_population_block_and_measurement_metadata():
         "lbbb-1",
         "rbbb-1",
     ]
-    assert select_case_ids(
-        dataset, cohort="test_lbbb_mild", forward_spec="conductivity"
-    ) == ["lbbb-1"]
+    assert select_case_ids(dataset, cohort="test_lbbb_mild", forward_spec="conductivity") == [
+        "lbbb-1"
+    ]
     assert select_case_ids(
         dataset,
         cohort="all",
@@ -98,15 +98,14 @@ def test_selection_uses_public_population_block_and_measurement_metadata():
 
 def test_cohort_run_writes_tables_and_resumes(tmp_path: Path, monkeypatch):
     calls = []
+    assets = {"config": "sha256:config", "implementation": "sha256:code"}
 
     def counted(*args, **kwargs):
         calls.append(args[1].case_id)
         return _record(*args, **kwargs)
 
     monkeypatch.setattr("opdis_ps.cohort.run_loaded_case", counted)
-    monkeypatch.setattr(
-        "opdis_ps.cohort.method_assets", lambda *args, **kwargs: {"config": "sha256:config"}
-    )
+    monkeypatch.setattr("opdis_ps.cohort.method_assets", lambda *args, **kwargs: dict(assets))
     dataset = _Dataset()
     options = dict(
         dataset=dataset,
@@ -130,6 +129,60 @@ def test_cohort_run_writes_tables_and_resumes(tmp_path: Path, monkeypatch):
 
     run_cohort(**options)
     assert calls == ["healthy-1", "lbbb-1"]
+
+    assets["implementation"] = "sha256:changed-code"
+    run_cohort(**options)
+    assert calls == ["healthy-1", "lbbb-1", "healthy-1", "lbbb-1"]
+
+
+def test_corrupt_completed_record_is_recomputed(tmp_path: Path, monkeypatch):
+    calls = []
+
+    def counted(*args, **kwargs):
+        calls.append(args[1].case_id)
+        return _record(*args, **kwargs)
+
+    monkeypatch.setattr("opdis_ps.cohort.run_loaded_case", counted)
+    monkeypatch.setattr("opdis_ps.cohort.method_assets", lambda *args, **kwargs: {})
+    options = dict(
+        dataset=_Dataset(),
+        case_ids=["healthy-1"],
+        method="tikhonov",
+        forward_spec="conductivity",
+        snr_db=40.0,
+        output_root=tmp_path,
+        config_root=tmp_path,
+    )
+    run_cohort(**options)
+    path = tmp_path / "cases" / "healthy-1" / "tikhonov" / "metrics.json"
+    record = json.loads(path.read_text(encoding="utf-8"))
+    record["target_snr_db"] = "corrupt"
+    path.write_text(json.dumps(record), encoding="utf-8")
+
+    run_cohort(**options)
+    assert calls == ["healthy-1", "healthy-1"]
+
+    path.write_text("[]\n", encoding="utf-8")
+    run_cohort(**options)
+    assert calls == ["healthy-1", "healthy-1", "healthy-1"]
+
+
+def test_method_assets_bind_public_implementation(tmp_path: Path):
+    config_root = tmp_path / "configs" / "paper"
+    config_root.mkdir(parents=True)
+    (config_root / "tikhonov.toml").write_text(
+        'method = "tikhonov"\n[settings]\norder = 1\n', encoding="utf-8"
+    )
+    implementation = tmp_path / "src" / "package" / "model.py"
+    implementation.parent.mkdir(parents=True)
+    implementation.write_text("VALUE = 1\n", encoding="utf-8")
+    first = method_assets("tikhonov", forward_spec="conductivity", config_root=config_root)
+
+    implementation.write_text("VALUE = 2\n", encoding="utf-8")
+    second = method_assets("tikhonov", forward_spec="conductivity", config_root=config_root)
+
+    assert first["config"] == second["config"]
+    assert first["implementation"] != second["implementation"]
 
 
 def test_aggregate_reports_sample_standard_deviation():

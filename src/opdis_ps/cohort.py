@@ -102,9 +102,22 @@ def _sha256(path: Path) -> str:
     return "sha256:" + digest.hexdigest()
 
 
-def method_assets(
-    method: str, *, forward_spec: str, config_root: str | Path
-) -> dict[str, str]:
+def _source_tree_sha256(root: Path) -> str:
+    """Hash public Python source paths and bytes in a stable order."""
+    digest = hashlib.sha256()
+    source_root = root / "src"
+    paths = sorted(path for path in source_root.rglob("*.py") if path.is_file())
+    if not paths:
+        raise ValueError(f"no public Python sources found under {source_root}")
+    for path in paths:
+        digest.update(path.relative_to(root).as_posix().encode("utf-8"))
+        digest.update(b"\0")
+        digest.update(path.read_bytes())
+        digest.update(b"\0")
+    return "sha256:" + digest.hexdigest()
+
+
+def method_assets(method: str, *, forward_spec: str, config_root: str | Path) -> dict[str, str]:
     """Hash the config, checkpoint, and likelihood artifact that define one public method run."""
     config_root = Path(config_root).resolve()
     config_path = config_root / f"{method}.toml"
@@ -120,7 +133,9 @@ def method_assets(
         paths["likelihood_artifact"] = (
             repo_root / "artifacts" / DISCREPANCY_LABELS[forward_spec] / str(artifact_name)
         )
-    return {role: _sha256(path) for role, path in paths.items()}
+    result = {role: _sha256(path) for role, path in paths.items()}
+    result["implementation"] = _source_tree_sha256(repo_root)
+    return result
 
 
 def _load_completed(
@@ -141,10 +156,17 @@ def _load_completed(
         record = json.loads(path.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError):
         return None
+    if not isinstance(record, dict):
+        return None
     expected_snr = math.inf if snr_db is None else float(snr_db)
+    try:
+        stored_snr = float(record.get("target_snr_db", math.nan))
+        for metric in METRICS:
+            float(record[metric])
+    except (KeyError, TypeError, ValueError):
+        return None
     identity_matches = (
-        isinstance(record, dict)
-        and record.get("cohort_schema_version") == 1
+        record.get("cohort_schema_version") == 1
         and record.get("case_id") == case_id
         and record.get("method") == method
         and record.get("forward_spec") == forward_spec
@@ -152,9 +174,9 @@ def _load_completed(
         and record.get("package_manifest_sha256") == package_manifest_sha256
         and record.get("operator_id") == operator_id
         and record.get("method_assets") == assets
-        and float(record.get("target_snr_db", math.nan)) == expected_snr
+        and stored_snr == expected_snr
     )
-    if not identity_matches or any(metric not in record for metric in METRICS):
+    if not identity_matches:
         return None
     return record
 
@@ -213,16 +235,20 @@ def run_cohort(
     for index, case_id in enumerate(case_ids, start=1):
         case_row = dataset.cases[case_id]
         metrics_path = output_root / "cases" / case_id / method / "metrics.json"
-        record = None if force else _load_completed(
-            metrics_path,
-            case_id=case_id,
-            method=method,
-            forward_spec=forward_spec,
-            snr_db=snr_db,
-            package_id=dataset.package_id,
-            package_manifest_sha256=dataset.manifest_sha256,
-            operator_id=f"{case_row['geometry_id']}-nominal",
-            assets=assets,
+        record = (
+            None
+            if force
+            else _load_completed(
+                metrics_path,
+                case_id=case_id,
+                method=method,
+                forward_spec=forward_spec,
+                snr_db=snr_db,
+                package_id=dataset.package_id,
+                package_manifest_sha256=dataset.manifest_sha256,
+                operator_id=f"{case_row['geometry_id']}-nominal",
+                assets=assets,
+            )
         )
         action = "skipping" if record is not None else "running"
         if on_progress is not None:
