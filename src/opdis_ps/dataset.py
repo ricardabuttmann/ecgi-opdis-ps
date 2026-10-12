@@ -136,8 +136,11 @@ class PaperDataset:
 
     def __init__(self, root: str | Path, *, geometry_root: str | Path | None = None) -> None:
         self.root = Path(root).resolve()
-        manifest = _read_json(self.root / "manifest.json")
+        manifest_path = self.root / "manifest.json"
+        manifest = _read_json(manifest_path)
         self.package_id = str(manifest.get("package_id"))
+        self.release_version = str(manifest.get("release_version", ""))
+        self.manifest_sha256 = _sha256(manifest_path)
         self.cases = {str(row["case_id"]): row for row in _read_jsonl(self.root / "cases.jsonl")}
         self.noise = {str(row["case_id"]): row for row in _read_jsonl(self.root / "noise.jsonl")}
         self.operators = {

@@ -95,6 +95,25 @@ shard, loads the shared surface and regularizer, and recreates the frozen averag
 `awgn_iid` noise direction from the anonymous per-case seed in `noise.jsonl`. Internal simulation
 paths and source subject identifiers are neither required nor exposed.
 
+Run a complete public cohort with the same loader and method settings:
+
+```bash
+python scripts/run_cohort.py \
+  --dataset artifacts/paper-evaluation-v1 \
+  --cohort healthy \
+  --forward-spec conductivity \
+  --snr-db 40 \
+  --method tikhonov
+```
+
+`--cohort` accepts `all`, `healthy`, `pathology`, or an exact public `block_id` from
+`cases.jsonl`, such as `test_lbbb_mild`. Use `--limit 1` for a quick end-to-end check. Results are
+written after every case: `results.csv` contains one row per case and `summary.csv` contains the
+mean and sample standard deviation for each population/pathology block. The command reuses a case
+only when its package manifest, operator, public implementation, method config, checkpoint,
+likelihood artifact, forward specification, and SNR identity match, so rerunning the same command
+safely continues an interrupted job. Pass `--force` to recompute completed cases.
+
 ## Methods and frozen settings
 
 ### Variational regularization
