@@ -114,6 +114,13 @@ only when its package manifest, operator, public implementation, method config, 
 likelihood artifact, forward specification, and SNR identity match, so rerunning the same command
 safely continues an interrupted job. Pass `--force` to recompute completed cases.
 
+## Retrain the learned models
+
+The public prior, Transformer, and Palette training commands consume the extracted
+`paper-training-v1` package and require explicit config and output paths. See
+[`docs/train_public_models.md`](docs/train_public_models.md) for commands, checkpoint format,
+and the additional data and compute needed for full paper reproduction.
+
 ## Methods and frozen settings
 
 ### Variational regularization

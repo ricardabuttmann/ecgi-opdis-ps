@@ -11,6 +11,7 @@ from pathlib import Path
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 from ecgi.mesh_operators.template import Template
 from ecgi.models.diffusion_baseline.padding import canvas_crop, canvas_pad
@@ -176,3 +177,19 @@ class GaussianDiffusion(nn.Module):
         a = self.sqrt_alpha_bars[tau].view(-1, 1, 1, 1, 1)
         b = self.sqrt_one_minus_alpha_bars[tau].view(-1, 1, 1, 1, 1)
         return b * x_tau + a * out
+
+    def q_sample(self, x0: torch.Tensor, tau: torch.Tensor, noise: torch.Tensor) -> torch.Tensor:
+        """Draw a noisy field at each sample's diffusion step."""
+        a = self.sqrt_alpha_bars[tau].view(-1, 1, 1, 1, 1)
+        b = self.sqrt_one_minus_alpha_bars[tau].view(-1, 1, 1, 1, 1)
+        return a * x0 + b * noise
+
+    def training_loss(self, x0: torch.Tensor, coords: torch.Tensor) -> torch.Tensor:
+        """Regress the checkpoint-declared epsilon or velocity target."""
+        tau = torch.randint(self.T, (x0.shape[0],), device=x0.device)
+        noise = torch.randn_like(x0)
+        x_tau = self.q_sample(x0, tau, noise)
+        a = self.sqrt_alpha_bars[tau].view(-1, 1, 1, 1, 1)
+        b = self.sqrt_one_minus_alpha_bars[tau].view(-1, 1, 1, 1, 1)
+        target = noise if self.parameterization == "eps" else a * noise - b * x0
+        return F.mse_loss(self._net_output(x_tau, coords, tau), target)

@@ -12,6 +12,7 @@ from abc import ABC, abstractmethod
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 from ecgi.models.diffusion_baseline.diffusion import GaussianDiffusion, build_coord_channels
 from ecgi.models.diffusion_baseline.padding import canvas_crop, canvas_pad
@@ -101,6 +102,24 @@ class ConditionalGaussianDiffusion(GaussianDiffusion, ABC):
         a = self.sqrt_alpha_bars[tau].view(-1, 1, 1, 1, 1)
         b = self.sqrt_one_minus_alpha_bars[tau].view(-1, 1, 1, 1, 1)
         return b * x_tau + a * raw
+
+    def training_loss(
+        self, x0: torch.Tensor, coords: torch.Tensor, condition: torch.Tensor
+    ) -> torch.Tensor:
+        """Regress epsilon or velocity from normalized HSP and clean BSP pairs."""
+        condition = self.prepare_condition(condition)
+        if condition.shape != x0.shape:
+            raise ValueError(f"condition shape {tuple(condition.shape)} != HSP {tuple(x0.shape)}")
+        tau = torch.randint(self.T, (x0.shape[0],), device=x0.device)
+        noise = torch.randn_like(x0)
+        x_tau = self.q_sample(x0, tau, noise)
+        model_in = torch.cat([x_tau, condition, coords], dim=1)
+        padded, offsets = canvas_pad(model_in, self.t_canvas, self.z_canvas)
+        prediction = canvas_crop(self.unet(padded, tau), offsets)
+        a = self.sqrt_alpha_bars[tau].view(-1, 1, 1, 1, 1)
+        b = self.sqrt_one_minus_alpha_bars[tau].view(-1, 1, 1, 1, 1)
+        target = noise if self.parameterization == "eps" else a * noise - b * x0
+        return F.mse_loss(prediction, target)
 
 class BspConditionalGaussianDiffusion(ConditionalGaussianDiffusion):
     """Conditional VP-DDPM whose learned adapter consumes raw normalized BSP."""
