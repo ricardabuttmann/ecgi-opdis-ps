@@ -1,4 +1,4 @@
-"""Portable inference package for the anonymous paper artifact."""
+"""Portable inference and public dataset interfaces for the ECGI paper artifact."""
 
 from opdis_ps.runner import IMPLEMENTED_METHODS, run_method
 

@@ -1,7 +1,9 @@
-# Anonymous ECGI paper artifact
+# ECGI operator-discrepancy paper artifact
 
-This repository provides reproducible 40 dB ECGI reconstructions for the methods reported in the
-paper. Three anonymized examples cover the two operator discrepancies studied in the paper:
+This repository is the public code companion for the accepted ECGI operator-discrepancy paper. It
+provides the reported inverse methods, small runnable examples, and loaders for the separately
+published paper and native-resolution datasets. Three self-contained examples cover the two
+operator discrepancies studied in the paper:
 `lung-conductivity`, `subcutaneous-fat`, and the pathological
 `lbbb-lung-conductivity` case.
 
@@ -10,8 +12,18 @@ implementations used for the paper experiments. The code under `src/opdis_ps/` a
 provides the release-specific interfaces for loading the public artifacts and running the
 reconstruction and HSP simulation examples.
 
-During anonymous peer review, this repository is provided under the
-[review-only terms](LICENSE). Third-party materials remain subject to their respective terms.
+The repository currently remains under the [review-only terms](LICENSE) while the accepted-release
+software and data licenses are finalized. Third-party materials remain subject to their respective
+terms.
+
+The bulk arrays will be DOI-hosted data packages rather than Git content:
+
+| Package | Purpose | Repository support |
+|---|---|---|
+| `paper-evaluation-v1` | reproduce the frozen paper Test evaluation on the 30 x 60 chart | indexed case loading, validation, single-case and resumable cohort execution |
+| `paper-training-v1` | retrain and reselect the learned paper methods | shared indexed data contract; portable training entry points are being prepared |
+| `paper-pretrained-models-v1` | all five prior, Transformer, and Palette replicates | the three seed-0 quick-start files remain bundled; full-package selection is being prepared |
+| `native-ecgi-v1` | native HSP, surfaces, placements, electrodes, and matching fine operators | component-aware native loading and exactly compatible BSP synthesis |
 
 ## Installation
 
@@ -113,6 +125,66 @@ mean and sample standard deviation for each population/pathology block. The comm
 only when its package manifest, operator, public implementation, method config, checkpoint,
 likelihood artifact, forward specification, and SNR identity match, so rerunning the same command
 safely continues an interrupted job. Pass `--force` to recompute completed cases.
+
+## Use the native-resolution dataset
+
+`native-ecgi-v1` preserves each signal on its released epicardial surface. It does not contain the
+paper chart or another template representation. Inspect the installed components and validate all
+metadata joins with:
+
+```bash
+python scripts/validate_native_dataset.py artifacts/native-ecgi-v1
+```
+
+Add `--checksums` for a complete byte-level verification. That option reads every installed file
+and therefore processes roughly 161 GiB for the complete package.
+
+Load one native HSP and its matching heart surface:
+
+```python
+from opdis_ps.native_dataset import NativeDataset
+
+dataset = NativeDataset("artifacts/native-ecgi-v1")
+case = dataset.load_case("healthy-test-p0001-r00")
+
+print(case.hsp.shape)
+print(case.heart_points_mm.shape)
+print(case.heart_faces.shape)
+```
+
+Users who installed the native-operator component can generate the directly compatible electrode
+measurement without a FEM rebuild:
+
+```python
+case = dataset.load_case("healthy-test-p0001-r00", include_operator=True)
+bsp = case.synthesize_bsp()  # exactly A_native @ hsp
+```
+
+The optional torso layer is explicit:
+
+```python
+case = dataset.load_case(
+    "healthy-test-p0001-r00",
+    include_operator=True,
+    include_torso_geometry=True,
+)
+print(case.torso.points_mm.shape)
+print(case.placement.electrode_xyz_mm.shape)
+print(case.placement.heart_to_torso)
+```
+
+The equivalent command-line inspection is:
+
+```bash
+python scripts/inspect_native_case.py \
+  --dataset artifacts/native-ecgi-v1 \
+  --case-id healthy-test-p0001-r00
+```
+
+The loader reads only the required slice from each memory-mapped NumPy shard. It does not resample
+the HSP, choose a reference heart, construct a template, or apply the paper-grid neural models to a
+native surface. Users may install metadata and geometry, add native HSP, and download the roughly
+67 GB operator component only when their workflow needs it.
 
 ## Methods and frozen settings
 
@@ -223,8 +295,8 @@ See [`docs/simulation_protocol.md`](docs/simulation_protocol.md) for the case co
 
 ## Reproducibility coverage
 
-This artifact focuses on the paper's inference stage: it provides the reported methods and metrics,
-frozen settings and checkpoints, three self-contained 40 dB examples, reference results, and one
-prepared openCARP simulation. The compact release boundary keeps every reviewer-facing workflow
-explicit and path-independent while the large cohort-generation and training infrastructure remains
-outside the artifact.
+This artifact focuses on public data consumption, paper inference, and reproducible evaluation. It
+provides the reported methods and metrics, frozen settings, three self-contained 40 dB examples,
+indexed paper-benchmark execution, native-resolution data access, reference results, and a legacy
+prepared openCARP example from the review artifact. Raw CT processing, mesh generation, cohort
+simulation, FEM assembly, and private cluster orchestration remain outside this repository.

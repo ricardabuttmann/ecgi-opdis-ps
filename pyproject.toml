@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "opdis-ps"
 version = "0.2.0"
-description = "Reproducible ECGI inference examples for an anonymous paper artifact"
+description = "Reproducible ECGI inference and public dataset interfaces"
 requires-python = ">=3.11"
 dependencies = [
   "numpy>=1.26",
