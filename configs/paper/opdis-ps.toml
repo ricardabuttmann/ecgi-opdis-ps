@@ -1,7 +1,6 @@
 method = "opdis-ps"
 
 [settings]
-checkpoint = "checkpoints/prior-s0.pt"
 weights = "ema"
 mode = "measurement_plus_discrepancy_conditional"
 conditional_artifact = "opdis-ps.npz"

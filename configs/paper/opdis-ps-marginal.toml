@@ -1,7 +1,6 @@
 method = "opdis-ps-marginal"
 
 [settings]
-checkpoint = "checkpoints/prior-s0.pt"
 weights = "ema"
 mode = "measurement_plus_discrepancy_full"
 discrepancy = "opdis-ps-marginal.npz"

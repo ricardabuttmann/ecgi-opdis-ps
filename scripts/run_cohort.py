@@ -8,6 +8,7 @@ from pathlib import Path
 
 from opdis_ps.cohort import run_cohort, select_case_ids
 from opdis_ps.dataset import FORWARD_SPECS, PaperDataset
+from opdis_ps.pretrained_models import METHOD_FAMILIES
 from opdis_ps.runner import IMPLEMENTED_METHODS
 
 
@@ -28,7 +29,12 @@ def main() -> None:
     parser.add_argument("--limit", type=int, help="run only the first N selected cases")
     parser.add_argument("--output", type=Path)
     parser.add_argument("--force", action="store_true", help="recompute completed cases")
+    parser.add_argument("--models", type=Path)
+    parser.add_argument("--replicate", type=int, choices=range(5), default=0)
     args = parser.parse_args()
+
+    if args.method in METHOD_FAMILIES and args.models is None:
+        parser.error(f"{args.method} requires --models pointing to paper-pretrained-models-v1")
 
     if args.method.startswith("opdis-ps") and args.forward_spec == "nominal":
         parser.error("OpDis-PS requires a released discrepancy measurement")
@@ -55,6 +61,8 @@ def main() -> None:
         snr_db=snr_db,
         output_root=output,
         config_root=config_root,
+        models_root=args.models,
+        replicate=args.replicate,
         force=args.force,
         on_progress=lambda message: print(message, flush=True),
     )

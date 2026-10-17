@@ -1,7 +1,6 @@
 method = "ddrm"
 
 [settings]
-checkpoint = "checkpoints/prior-s0.pt"
 weights = "ema"
 mode = "measurement_only"
 steps = 20

@@ -53,8 +53,9 @@ class _Dataset:
         )()
 
 
-def _record(method: str, case, output_root: Path, config_root: Path) -> dict:
+def _record(method: str, case, output_root: Path, config_root: Path, **kwargs) -> dict:
     del config_root
+    del kwargs
     value = 1.0 if case.case_id == "healthy-1" else 3.0
     record = {
         "method": method,

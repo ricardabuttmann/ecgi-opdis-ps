@@ -12,6 +12,7 @@ import numpy as np
 from opdis_ps.config import load_method_config
 from opdis_ps.data import ExampleCase, load_example_case
 from opdis_ps.metrics import evaluate_reconstruction
+from opdis_ps.pretrained_models import resolve_method_model
 from opdis_ps.public_models import (
     run_ddrm,
     run_dps,
@@ -41,6 +42,9 @@ def run_loaded_case(
     case: ExampleCase,
     output_root: str | Path,
     config_root: str | Path,
+    *,
+    models_root: str | Path | None = None,
+    replicate: int | str = 0,
 ) -> dict[str, Any]:
     """Run one method on either a legacy example or an indexed dataset case."""
     if method not in IMPLEMENTED_METHODS:
@@ -53,6 +57,7 @@ def run_loaded_case(
     if config_root.name != "paper" or config_root.parent.name != "configs":
         raise ValueError("config_root must point to the repository's configs/paper directory")
     repo_root = config_root.parents[1]
+    selected_model = resolve_method_model(method, models_root, replicate)
     if method == "tikhonov":
         result = run_tikhonov(case, settings)
     elif method == "tv":
@@ -60,13 +65,17 @@ def run_loaded_case(
     elif method == "st-tikhonov":
         result = run_spatiotemporal_tikhonov(case, settings)
     elif method == "transformer":
-        result = run_transformer(case, settings, repo_root)
+        assert selected_model is not None
+        result = run_transformer(case, settings, selected_model.path)
     elif method == "palette":
-        result = run_palette(case, settings, repo_root)
+        assert selected_model is not None
+        result = run_palette(case, settings, selected_model.path)
     elif method == "dps":
-        result = run_dps(case, settings, repo_root)
+        assert selected_model is not None
+        result = run_dps(case, settings, selected_model.path)
     else:
-        result = run_ddrm(case, settings, repo_root)
+        assert selected_model is not None
+        result = run_ddrm(case, settings, repo_root, selected_model.path)
 
     runtime_seconds = time.perf_counter() - started
     metrics = evaluate_reconstruction(
@@ -90,6 +99,15 @@ def run_loaded_case(
         "runtime_seconds": runtime_seconds,
         **result.diagnostics,
     }
+    if selected_model is not None:
+        record.update(
+            {
+                "model_id": selected_model.model_id,
+                "model_sha256": selected_model.sha256,
+                "model_package": "paper-pretrained-models-v1",
+                "model_package_manifest_sha256": selected_model.package_manifest_sha256,
+            }
+        )
     method_output = Path(output_root) / method
     method_output.mkdir(parents=True, exist_ok=True)
     np.savez_compressed(
@@ -109,6 +127,16 @@ def run_method(
     case_path: str | Path,
     output_root: str | Path,
     config_root: str | Path,
+    *,
+    models_root: str | Path | None = None,
+    replicate: int | str = 0,
 ) -> dict[str, Any]:
     """Compatibility wrapper for the bundled self-contained NPZ examples."""
-    return run_loaded_case(method, load_example_case(case_path), output_root, config_root)
+    return run_loaded_case(
+        method,
+        load_example_case(case_path),
+        output_root,
+        config_root,
+        models_root=models_root,
+        replicate=replicate,
+    )

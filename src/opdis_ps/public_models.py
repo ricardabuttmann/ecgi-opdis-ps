@@ -147,14 +147,13 @@ def run_total_variation(case: ExampleCase, settings: dict[str, Any]) -> PublicMo
 
 
 def run_transformer(
-    case: ExampleCase, settings: dict[str, Any], repo_root: Path
+    case: ExampleCase, settings: dict[str, Any], checkpoint_path: Path
 ) -> PublicModelResult:
     import torch
 
     from ecgi.data.dataset import average_reference
     from ecgi.models.transformer.network import TemporalTransformer
 
-    checkpoint_path = repo_root / str(settings["checkpoint"])
     checkpoint = _checkpoint(checkpoint_path, expected_weights=str(settings["weights"]))
     model = TemporalTransformer(**checkpoint["model_config"])
     device = _device(str(settings.get("device", "auto")), allow_mps=True)
@@ -175,14 +174,15 @@ def run_transformer(
     )
 
 
-def run_palette(case: ExampleCase, settings: dict[str, Any], repo_root: Path) -> PublicModelResult:
+def run_palette(
+    case: ExampleCase, settings: dict[str, Any], checkpoint_path: Path
+) -> PublicModelResult:
     import torch
 
     from ecgi.models.conditional_diffusion.diffusion import build_conditional_diffusion
     from ecgi.models.conditional_diffusion.sampler import conditional_ddim_sample
     from ecgi.models.diffusion_baseline.diffusion import build_coord_channels
 
-    checkpoint_path = repo_root / str(settings["checkpoint"])
     checkpoint = _checkpoint(checkpoint_path, expected_weights=str(settings["weights"]))
     config = checkpoint["model_config"]
     model = build_conditional_diffusion(
@@ -233,14 +233,15 @@ def run_palette(case: ExampleCase, settings: dict[str, Any], repo_root: Path) ->
     )
 
 
-def run_dps(case: ExampleCase, settings: dict[str, Any], repo_root: Path) -> PublicModelResult:
+def run_dps(
+    case: ExampleCase, settings: dict[str, Any], checkpoint_path: Path
+) -> PublicModelResult:
     import torch
 
     from ecgi.models.diffusion_baseline.diffusion import build_coord_channels, load_diffusion_model
     from ecgi.models.diffusion_baseline.dps import dps_sample
 
     device = _device(str(settings.get("device", "auto")), allow_mps=False)
-    checkpoint_path = repo_root / str(settings["checkpoint"])
     diffusion, scale, x_clip = load_diffusion_model(
         checkpoint_path,
         device,
@@ -284,6 +285,7 @@ def run_ddrm(
     case: ExampleCase,
     settings: dict[str, Any],
     repo_root: Path,
+    checkpoint_path: Path,
 ) -> PublicModelResult:
     from ecgi.forward.measurement_whitening import (
         ConditionalApproximationError,
@@ -299,7 +301,6 @@ def run_ddrm(
     )
 
     device = _device(str(settings.get("device", "auto")), allow_mps=False)
-    checkpoint_path = repo_root / str(settings["checkpoint"])
     diffusion, scale, x_clip = load_diffusion_model(
         checkpoint_path,
         device,

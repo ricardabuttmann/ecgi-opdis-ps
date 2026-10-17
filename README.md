@@ -51,8 +51,15 @@ python scripts/run_example.py --method tikhonov --case lbbb-lung-conductivity
 Run every method through the same interface:
 
 ```bash
-python scripts/run_all_methods.py --case lung-conductivity
+python scripts/run_all_methods.py \
+  --case lung-conductivity \
+  --models artifacts/paper-pretrained-models-v1
 ```
+
+Learned methods read their checkpoints from the separately distributed
+`paper-pretrained-models-v1` package. Pass its extracted directory with `--models` and select one
+of the five paper replicates with `--replicate 0` through `--replicate 4`. Replicate 0 is the
+default. Classical methods do not require the model package.
 
 Each run writes its reconstruction and metrics under `outputs/<case>/<method>/`. The combined
 `results.csv` and `results.html` are updated automatically. The CSV is the machine-readable result;
@@ -63,7 +70,7 @@ for an interactive local run; use `--no-open` on a remote machine, cluster, sand
 The result table contains the paper metrics in this order: RE, ATE, LE, sCC, and tCC. ATE is
 reported in milliseconds and LE in millimetres. The example verifies the released inference path;
 it does not replace the paper's cohort-level aggregation over cases and training replicates.
-Expected Tikhonov and seed-0 Transformer values for all three examples are provided in
+Expected Tikhonov and replicate-0 Transformer values for all three examples are provided in
 [`docs/reference_results.csv`](docs/reference_results.csv). They give reviewers a quick numerical
 comparison target in addition to the automated structural tests. The values were generated through
 this release runner and checked against the corresponding production reports. Minor backend
@@ -86,7 +93,9 @@ python scripts/run_benchmark_case.py \
   --case-id healthy-test-p0001-r00 \
   --forward-spec conductivity \
   --snr-db 40 \
-  --method tikhonov
+  --method transformer \
+  --models artifacts/paper-pretrained-models-v1 \
+  --replicate 0
 ```
 
 The loader joins `truth`, `measurement_clean`, and the nominal reconstruction operator by their
@@ -103,7 +112,9 @@ python scripts/run_cohort.py \
   --cohort healthy \
   --forward-spec conductivity \
   --snr-db 40 \
-  --method tikhonov
+  --method opdis-ps \
+  --models artifacts/paper-pretrained-models-v1 \
+  --replicate 0
 ```
 
 `--cohort` accepts `all`, `healthy`, `pathology`, or an exact public `block_id` from
@@ -131,7 +142,7 @@ hardware-dependent.
 
 | Method | Paper setting |
 |---|---|
-| `transformer` | direct temporal Transformer, seed-0 checkpoint |
+| `transformer` | direct temporal Transformer, selected replicate checkpoint |
 | `palette` | BSP-conditioned diffusion, cold start, 50 steps, eta=0, 16-draw mean |
 
 ### Posterior sampling
@@ -158,18 +169,28 @@ The official A100 benchmark measured a maximum of 1.972 GiB of PyTorch-allocated
 memory (DPS); DDRM and OpDis-PS each used 1.156 GiB. This excludes framework and process overhead,
 so a CUDA GPU with at least 4 GiB VRAM is the practical minimum for the released examples.
 
-## Examples, checkpoints, and likelihood artifacts
+## Examples, pretrained models, and likelihood artifacts
 
 The two physiological files in `examples/` share the same anonymous ground truth, geometry, and
 nominal reconstruction operator. Their measurements differ according to the selected operator
 discrepancy. The third file is the complete-LBBB lung-conductivity case used in the paper's
 qualitative comparison. All examples use the paper's deterministic 40 dB noise protocol.
 
-The compact checkpoints are:
+The separately distributed `paper-pretrained-models-v1` package contains fifteen compact,
+inference-only checkpoints:
 
-- `checkpoints/prior-s0.pt` for DPS, DDRM, the ablations, and OpDis-PS;
-- `checkpoints/palette-s0.pt` for Palette;
-- `checkpoints/transformer-s0.pt` for the Transformer.
+- `prior/prior-s0.pt` through `prior/prior-s4.pt` for DPS, DDRM, the ablations, and OpDis-PS;
+- `palette/palette-s0.pt` through `palette/palette-s4.pt` for Palette;
+- `transformer/transformer-s0.pt` through `transformer/transformer-s4.pt` for the Transformer.
+
+The checkpoints are not stored in this Git repository. Extract the package as
+`artifacts/paper-pretrained-models-v1` or pass any other extraction location with `--models`.
+The runner reads the package manifest, selects the requested family and replicate, then checks the
+file size and SHA-256 before loading it. Verify the complete package once after downloading it:
+
+```bash
+python scripts/validate_pretrained_models.py artifacts/paper-pretrained-models-v1
+```
 
 Each example automatically selects the matching files under
 `artifacts/<operator-discrepancy>/`: a structured marginal covariance, its trace-matched isotropic
@@ -185,7 +206,6 @@ Verify all published binary files with:
 
 ```bash
 sha256sum -c CHECKSUMS.sha256
-python verify_checkpoints.py
 ```
 
 On standard macOS installations without GNU coreutils, use
@@ -224,7 +244,8 @@ See [`docs/simulation_protocol.md`](docs/simulation_protocol.md) for the case co
 ## Reproducibility coverage
 
 This artifact focuses on the paper's inference stage: it provides the reported methods and metrics,
-frozen settings and checkpoints, three self-contained 40 dB examples, reference results, and one
+frozen settings with external pretrained-model loading, three self-contained 40 dB examples,
+reference results, and one
 prepared openCARP simulation. The compact release boundary keeps every reviewer-facing workflow
 explicit and path-independent while the large cohort-generation and training infrastructure remains
 outside the artifact.

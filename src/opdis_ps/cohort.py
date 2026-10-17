@@ -15,6 +15,7 @@ import numpy as np
 
 from opdis_ps.config import load_method_config
 from opdis_ps.dataset import DISCREPANCY_LABELS, PaperDataset
+from opdis_ps.pretrained_models import resolve_method_model
 from opdis_ps.runner import run_loaded_case
 
 METRICS = (
@@ -117,15 +118,23 @@ def _source_tree_sha256(root: Path) -> str:
     return "sha256:" + digest.hexdigest()
 
 
-def method_assets(method: str, *, forward_spec: str, config_root: str | Path) -> dict[str, str]:
+def method_assets(
+    method: str,
+    *,
+    forward_spec: str,
+    config_root: str | Path,
+    models_root: str | Path | None = None,
+    replicate: int | str = 0,
+) -> dict[str, str]:
     """Hash the config, checkpoint, and likelihood artifact that define one public method run."""
     config_root = Path(config_root).resolve()
     config_path = config_root / f"{method}.toml"
     settings = load_method_config(config_root, method).get("settings", {})
     repo_root = config_root.parents[1]
     paths = {"config": config_path}
-    if "checkpoint" in settings:
-        paths["checkpoint"] = repo_root / str(settings["checkpoint"])
+    selected_model = resolve_method_model(method, models_root, replicate)
+    if selected_model is not None:
+        paths["checkpoint"] = selected_model.path
     artifact_name = settings.get("discrepancy", settings.get("conditional_artifact"))
     if artifact_name is not None:
         if forward_spec == "nominal":
@@ -134,6 +143,9 @@ def method_assets(method: str, *, forward_spec: str, config_root: str | Path) ->
             repo_root / "artifacts" / DISCREPANCY_LABELS[forward_spec] / str(artifact_name)
         )
     result = {role: _sha256(path) for role, path in paths.items()}
+    if selected_model is not None:
+        result["model_id"] = selected_model.model_id
+        result["model_package_manifest"] = selected_model.package_manifest_sha256
     result["implementation"] = _source_tree_sha256(repo_root)
     return result
 
@@ -225,12 +237,20 @@ def run_cohort(
     snr_db: float | None,
     output_root: str | Path,
     config_root: str | Path,
+    models_root: str | Path | None = None,
+    replicate: int | str = 0,
     force: bool = False,
     on_progress: Callable[[str], None] | None = None,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     """Run or resume one method and keep per-case and aggregate CSV files current."""
     output_root = Path(output_root)
-    assets = method_assets(method, forward_spec=forward_spec, config_root=config_root)
+    assets = method_assets(
+        method,
+        forward_spec=forward_spec,
+        config_root=config_root,
+        models_root=models_root,
+        replicate=replicate,
+    )
     rows: list[dict[str, Any]] = []
     for index, case_id in enumerate(case_ids, start=1):
         case_row = dataset.cases[case_id]
@@ -260,6 +280,8 @@ def run_cohort(
                 case,
                 output_root / "cases" / case_id,
                 config_root,
+                models_root=models_root,
+                replicate=replicate,
             )
             record.update(
                 {

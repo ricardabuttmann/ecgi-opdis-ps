@@ -16,6 +16,8 @@ def main() -> None:
     parser.add_argument("--case", choices=PUBLIC_EXAMPLES, default=PUBLIC_EXAMPLES[0])
     parser.add_argument("--output", type=Path)
     parser.add_argument("--config-root", type=Path, default=Path("configs/paper"))
+    parser.add_argument("--models", type=Path, required=True)
+    parser.add_argument("--replicate", type=int, choices=range(5), default=0)
     parser.add_argument("--no-open", action="store_true", help="do not open results.html")
     args = parser.parse_args()
 
@@ -23,7 +25,14 @@ def main() -> None:
     output = args.output or Path("outputs") / args.case
     for method in IMPLEMENTED_METHODS:
         print(f"starting {method} on {args.case}", flush=True)
-        record = run_method(method, case_path, output, args.config_root)
+        record = run_method(
+            method,
+            case_path,
+            output,
+            args.config_root,
+            models_root=args.models,
+            replicate=args.replicate,
+        )
         print(f"completed {record['method']} on {record['case_id']}", flush=True)
     csv_path, html_path = refresh_results_table(output, open_browser=not args.no_open)
     print(f"results CSV: {csv_path.resolve()}")
