@@ -1,0 +1,36 @@
+family = "transformer"
+
+[data]
+train_cases = 5100
+val_cases = 100
+n_time = 91
+n_z = 30
+n_phi = 60
+n_electrodes = 176
+chart_id = "harmonic_ea_v1"
+hsp_scale = 2.9297420978546143
+bsp_scale = 0.554271488115625
+x_clip = 10.310369704210428
+
+[model]
+d_model = 384
+n_heads = 8
+n_layers = 6
+dim_feedforward = 1536
+dropout = 0.1
+
+[training]
+seed = 20260728
+validation_seed = 20260803
+epochs = 100
+batch_size = 8
+lr = 0.0001
+weight_decay = 0.0001
+grad_clip = 1.0
+patience = 15
+ema = 0.0
+noise_augment = true
+noise_seed = 20260729
+snr_db_low = 10.0
+snr_db_high = 40.0
+clean_prob = 0.2

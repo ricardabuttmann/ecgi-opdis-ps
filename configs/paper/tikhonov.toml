@@ -1,0 +1,7 @@
+method = "tikhonov"
+
+[settings]
+order = 1
+selection = "gcv"
+rank_tol = 1e-6
+lambda_range = [1e-8, 1e2]

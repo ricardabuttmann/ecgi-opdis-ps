@@ -1,0 +1,10 @@
+method = "dps"
+
+[settings]
+weights = "ema"
+zeta = 40.0
+steps = 50
+eta = 0.0
+temperature = 1.0
+sample_seed = 3079211378235261092
+point_samples = 16

@@ -1,0 +1,32 @@
+cff-version: 1.2.0
+message: "If you use this software or its accompanying data, please cite the paper below."
+type: software
+title: "Electrocardiographic Imaging via Posterior Sampling under Operator Discrepancy"
+version: 1.0.0
+authors:
+  - family-names: Buttmann
+    given-names: Ricarda
+    email: ricarda.buttmann@thws.de
+  - family-names: Lehrmann
+    given-names: Andreas M.
+    email: andreas.lehrmann@thws.de
+repository-code: "https://github.com/ricardabuttmann/ecgi-opdis-ps"
+license: MIT
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.23449575
+    description: "Evaluation, training, and native-resolution ECGI datasets"
+  - type: doi
+    value: 10.5281/zenodo.23449627
+    description: "Pretrained models and likelihood artifacts"
+preferred-citation:
+  type: conference-paper
+  title: "Electrocardiographic Imaging via Posterior Sampling under Operator Discrepancy"
+  authors:
+    - family-names: Buttmann
+      given-names: Ricarda
+    - family-names: Lehrmann
+      given-names: Andreas M.
+  conference:
+    name: "The Third NeurIPS Workshop on GenAI for Health"
+  year: 2026
