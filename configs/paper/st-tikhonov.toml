@@ -1,0 +1,9 @@
+method = "st-tikhonov"
+
+[settings]
+spatial_order = 1
+temporal_order = 2
+rho = 1.0
+selection = "gcv"
+rank_tol = 1e-6
+lambda_range = [1e-8, 1e2]

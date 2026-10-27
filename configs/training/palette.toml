@@ -1,0 +1,30 @@
+family = "palette"
+
+[data]
+train_cases = 5100
+val_cases = 100
+n_time = 91
+n_z = 30
+n_phi = 60
+n_electrodes = 176
+chart_id = "harmonic_ea_v1"
+hsp_scale = 2.9297420978546143
+bsp_scale = 0.554271488115625
+x_clip = 10.310369704210428
+
+[model]
+T = 1000
+t_canvas = 96
+z_canvas = 32
+base_channels = 32
+parameterization = "v"
+
+[training]
+seed = 20260728
+validation_seed = 20260803
+epochs = 150
+batch_size = 4
+lr = 0.0002
+weight_decay = 0.0001
+ema = 0.9999
+grad_clip = 1.0

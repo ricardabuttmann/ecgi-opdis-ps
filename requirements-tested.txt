@@ -1,0 +1,8 @@
+# Versions used for the public release tests. The build tools allow the subsequent editable install
+# to run with `--no-build-isolation` instead of creating a second network-dependent environment.
+setuptools==83.0.0
+wheel==0.47.0
+numpy==2.5.1
+scipy==1.18.0
+torch==2.13.0
+pytest==9.1.1

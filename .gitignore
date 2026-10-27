@@ -1,0 +1,16 @@
+.DS_Store
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.venv/
+*.egg-info/
+build/
+dist/
+outputs/
+artifacts/downloads/
+artifacts/paper-evaluation-v1/
+artifacts/paper-training-v1/
+artifacts/paper-pretrained-models-v1/
+artifacts/native-ecgi-v1/
+runs/
